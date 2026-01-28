@@ -14,107 +14,139 @@ const statusIndicator = document.getElementById('status-indicator');
 const statusText = statusIndicator.querySelector('.status-text');
 const transcriptContainer = document.getElementById('transcript-container');
 const placeholderText = document.getElementById('placeholder-text');
-const interimDiv = document.getElementById('interim-text');
 const finalDiv = document.getElementById('final-text');
 const resultsSection = document.getElementById('results-section');
-const mainCard = document.querySelector('.main-card');
+const liveTimer = document.getElementById('live-timer');
 
 // Elementos de resultados
 const resWords = document.getElementById('res-words');
 const resTime = document.getElementById('res-time');
 const resWPM = document.getElementById('res-wpm');
 
-// Estado de la aplicación
+// ESTADO V13: Lógica de Segmentación Anti-Eco
 let isListening = false;
 let startTime = null;
-let fullTranscript = "";
 let timerInterval = null;
+let masterTranscript = []; // Lista de palabras únicas validadas
+let lastFinalText = ""; // Referencia para detectar duplicados de Android
 
 if (recognition) {
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'es-ES'; // Configurado para español
+    recognition.lang = 'es-ES';
 
     recognition.onstart = () => {
         isListening = true;
-        startTime = Date.now();
+        if (!startTime) startTime = Date.now();
         btnStart.disabled = true;
         btnStart.classList.add('recording');
         btnStop.disabled = false;
         statusIndicator.classList.add('active');
         statusText.innerText = "Escuchando...";
         placeholderText.classList.add('hidden');
-        resultsSection.classList.add('hidden');
-
-        // Limpiar transcripción previa
-        finalDiv.innerText = "";
-        interimDiv.innerText = "";
-        fullTranscript = "";
     };
 
     recognition.onresult = (event) => {
-        let interimTranscript = "";
+        let currentInterim = "";
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript.trim();
+
             if (event.results[i].isFinal) {
-                fullTranscript += event.results[i][0].transcript + " ";
+                // LÓGICA V13: Detección de solapamiento
+                // Si la frase que llega (transcript) es igual a la última que procesamos, la ignoramos.
+                if (transcript !== lastFinalText) {
+                    processFinalTranscript(transcript);
+                    lastFinalText = transcript;
+                }
             } else {
-                interimTranscript += event.results[i][0].transcript;
+                currentInterim = transcript;
             }
         }
 
-        finalDiv.innerText = fullTranscript;
-        interimDiv.innerText = interimTranscript;
+        // Actualizar UI: Mostramos lo validado + el texto intermedio actual
+        finalDiv.innerText = masterTranscript.join(" ") + " ";
+        document.getElementById('interim-text').innerText = currentInterim;
 
-        // Auto-scroll al final
         transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
     };
 
     recognition.onerror = (event) => {
-        console.error("Error de reconocimiento:", event.error);
-        stopListening();
+        console.warn("Speech recognition notice:", event.error);
     };
 
     recognition.onend = () => {
+        // Reinicio silencioso para mantener la sesión viva en Android
         if (isListening) {
-            // Si terminó inesperadamente pero deberíamos estar escuchando, reiniciar
-            recognition.start();
+            setTimeout(() => {
+                if (isListening) {
+                    try { recognition.start(); } catch (e) { }
+                }
+            }, 150);
         }
     };
 }
 
-// Funciones de control
+// Función crítica para limpiar duplicados reales
+function processFinalTranscript(newText) {
+    const newWords = newText.split(/\s+/).filter(w => w.length > 0);
+
+    if (masterTranscript.length === 0) {
+        masterTranscript = newWords;
+        return;
+    }
+
+    // Buscamos si las primeras palabras de la nueva frase ya están al final de nuestra historia
+    // Esto arregla el "Eco" de Samsung
+    let overlapCount = 0;
+    const maxCheck = Math.min(newWords.length, masterTranscript.length, 5);
+
+    for (let i = 1; i <= maxCheck; i++) {
+        const historyTail = masterTranscript.slice(-i).join(" ").toLowerCase();
+        const newHead = newWords.slice(0, i).join(" ").toLowerCase();
+        if (historyTail === newHead) {
+            overlapCount = i;
+        }
+    }
+
+    // Solo añadimos las palabras que NO se solapan
+    const trulyNewWords = newWords.slice(overlapCount);
+    masterTranscript = masterTranscript.concat(trulyNewWords);
+}
+
 function startListening() {
     if (!recognition) return;
+    masterTranscript = [];
+    lastFinalText = "";
+    finalDiv.innerText = "";
+    document.getElementById('interim-text').innerText = "";
+    startTime = Date.now();
+    resultsSection.classList.add('hidden');
+
+    clearInterval(timerInterval);
+    liveTimer.innerText = "00:00";
+    timerInterval = setInterval(updateTimer, 1000);
+
     try {
-        recognition.start();
-    } catch (e) {
-        console.error("Error al iniciar:", e);
-    }
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(() => recognition.start())
+            .catch(() => alert("Por favor permite el acceso al micrófono."));
+    } catch (e) { }
 }
 
 function stopListening() {
     if (!isListening) return;
-
-    // Capturar lo que hay en el DOM justo antes de detener
-    const finalContent = finalDiv.innerText;
-    const interimContent = interimDiv.innerText;
-    const totalText = (finalContent + " " + interimContent).trim();
-
     isListening = false;
-    recognition.stop();
+    clearInterval(timerInterval);
 
-    const endTime = Date.now();
-    const durationMs = endTime - startTime;
-    const durationSec = durationMs / 1000;
+    try { recognition.stop(); } catch (e) { }
 
-    // Cálculos
-    const wordCount = countWords(totalText);
+    const totalText = masterTranscript.join(" ");
+    const durationSec = (Date.now() - startTime) / 1000;
+    const wordCount = masterTranscript.length;
     const durationMin = durationSec / 60;
-    // Redondeo hacia arriba para el promedio si hay palabras
     const wpm = durationMin > 0 ? Math.ceil(wordCount / durationMin) : 0;
 
-    // Actualizar UI
     btnStart.disabled = false;
     btnStart.classList.remove('recording');
     btnStop.disabled = true;
@@ -124,23 +156,22 @@ function stopListening() {
     displayResults(wordCount, durationSec, wpm);
 }
 
-function countWords(str) {
-    if (!str) return 0;
-    return str.trim().split(/\s+/).filter(word => word.length > 0).length;
+function updateTimer() {
+    if (!startTime) return;
+    const diff = Math.floor((Date.now() - startTime) / 1000);
+    const mm = Math.floor(diff / 60).toString().padStart(2, '0');
+    const ss = (diff % 60).toString().padStart(2, '0');
+    liveTimer.innerText = `${mm}:${ss}`;
 }
 
 function displayResults(words, seconds, wpm) {
     resWords.innerText = words;
-
-    // Formatear tiempo (00:00)
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     resTime.innerText = `${mins > 0 ? mins + 'm ' : ''}${secs}s`;
-
     resWPM.innerText = wpm;
     resultsSection.classList.remove('hidden');
 
-    // Animación de entrada para los resultados
     const cards = resultsSection.querySelectorAll('.result-item');
     cards.forEach((card, index) => {
         card.style.opacity = '0';
@@ -153,6 +184,5 @@ function displayResults(words, seconds, wpm) {
     });
 }
 
-// Event Listeners
 btnStart.addEventListener('click', startListening);
 btnStop.addEventListener('click', stopListening);

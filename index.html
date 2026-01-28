@@ -8,19 +8,10 @@
     <meta name="description"
         content="Herramienta profesional para analizar tu discurso, contar palabras y medir tu velocidad al hablar.">
     <meta name="theme-color" content="#6366f1">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
-    </script>
 </head>
 
 <body>
@@ -34,6 +25,7 @@
         <header>
             <h1>Voice<span>Analytics</span></h1>
             <p class="subtitle">Analiza tu oratoria en tiempo real</p>
+            <div style="color: #10b981; font-weight: 800; font-size: 1.5rem; margin-top: 5px;">V13</div>
         </header>
 
         <section class="glass-card main-card">
@@ -42,9 +34,13 @@
                 <span class="status-text">Listo para empezar</span>
             </div>
 
+            <div id="live-timer" class="live-timer"
+                style="font-size: 3rem; font-weight: 800; color: #10b981; text-align: center; margin: 10px 0; text-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">
+                00:00</div>
+
             <div class="transcript-container" id="transcript-container">
                 <p id="placeholder-text">Haz clic en "Escuchar" y comienza a hablar...</p>
-                <div id="interim-text" class="interim"></div>
+                <div id="interim-text" class="interim" style="color: rgba(255,255,255,0.5); font-style: italic;"></div>
                 <div id="final-text" class="final"></div>
             </div>
 
@@ -86,6 +82,9 @@
     </main>
 
     <script src="script.js"></script>
+    <footer style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.7rem; opacity: 0.5;">
+        Version 11.0 - Restore Point
+    </footer>
 </body>
 
 </html>
