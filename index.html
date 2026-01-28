@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Analytics Pro - Transcripción en Tiempo Real</title>
+    <meta name="description"
+        content="Herramienta profesional para analizar tu discurso, contar palabras y medir tu velocidad al hablar.">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="container">
+        <header>
+            <h1>Voice<span>Analytics</span></h1>
+            <p class="subtitle">Analiza tu oratoria en tiempo real</p>
+        </header>
+
+        <section class="glass-card main-card">
+            <div class="status-indicator" id="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Listo para empezar</span>
+            </div>
+
+            <div class="transcript-container" id="transcript-container">
+                <p id="placeholder-text">Haz clic en "Escuchar" y comienza a hablar...</p>
+                <div id="interim-text" class="interim"></div>
+                <div id="final-text" class="final"></div>
+            </div>
+
+            <div class="controls">
+                <button id="btn-start" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                    Escuchar
+                </button>
+                <button id="btn-stop" class="btn btn-secondary" disabled>
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="6" y="6" width="12" height="12"></rect>
+                    </svg>
+                    Finalizar
+                </button>
+            </div>
+        </section>
+
+        <section id="results-section" class="results-grid hidden">
+            <div class="glass-card result-item">
+                <span class="result-label">Palabras</span>
+                <span class="result-value" id="res-words">0</span>
+            </div>
+            <div class="glass-card result-item">
+                <span class="result-label">Tiempo</span>
+                <span class="result-value" id="res-time">0s</span>
+            </div>
+            <div class="glass-card result-item highlight">
+                <span class="result-label">Promedio (PPM)</span>
+                <span class="result-value" id="res-wpm">0</span>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
